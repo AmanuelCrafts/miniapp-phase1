@@ -1,0 +1,59 @@
+# Render blueprint for the Phase 1 API (Express + MongoDB).
+#
+# Two settings here are deliberate and are the two easiest things to get wrong
+# when configuring a Node service by hand in the Render dashboard:
+#
+#  1. buildCommand installs devDependencies even though NODE_ENV=production.
+#     `npm run build` is `tsc -p tsconfig.build.json` and typescript is a
+#     devDependency, so a plain `npm install` under NODE_ENV=production omits
+#     tsc and the deploy dies with "tsc: not found".
+#
+#  2. rootDir is `server`. The API is a standalone Express service; it must not
+#     try to install or build the Next.js client.
+#
+# Secrets are never committed: `sync: false` makes Render prompt for the value
+# when the blueprint is applied.
+services:
+  - type: web
+    name: tgma-api
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+
+      # Required for production cookie hardening (SameSite=None; Secure) and for
+      # the placeholder-secret guard to run at boot.
+      - key: NODE_ENV
+        value: production
+
+      # MongoDB Atlas connection string. The local mongod on 127.0.0.1 is not
+      # reachable from Render, so this must be an Atlas (or other hosted) URI.
+      - key: MONGODB_URI
+        sync: false
+
+      # Server only. Never expose this to Vercel or to the browser bundle.
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+
+      # Signs the session cookie. Must be at least 32 characters.
+      - key: SESSION_SECRET
+        generateValue: true
+
+      # Comma separated allowlist of exact origins, e.g.
+      # https://your-app.vercel.app. Wildcards are rejected by the config guard,
+      # and every Vercel *preview* URL would be a separate origin, so test on
+      # the production domain.
+      - key: FRONTEND_URL
+        sync: false
+
+      # Render terminates TLS in front of the service, so the app sits behind
+      # exactly one proxy. The rate limiter resolves client IPs from
+      # X-Forwarded-For and needs this to be correct.
+      - key: TRUST_PROXY_HOPS
+        value: "1"
