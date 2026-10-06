@@ -13,6 +13,7 @@ const nextConfig: NextConfig = {
   // They are regenerated on every run, so they are either committed as noise or
   // suppressed here to keep the working tree matching the documented layout.
   agentRules: false,
+  turbopack: false as any,
 
   async headers() {
     return [
