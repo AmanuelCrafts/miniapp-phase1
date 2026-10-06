@@ -1,4 +1,4 @@
-@tailwind base;
+﻿@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
@@ -9,20 +9,6 @@
  * every colour here maps to a Telegram variable with a dark-first fallback.
  * Switching the Telegram theme re-paints the app instantly with no JS.
  */
-@theme {
-  --color-tg-bg: var(--app-bg);
-  --color-tg-secondary: var(--app-secondary-bg);
-  --color-tg-text: var(--app-text);
-  --color-tg-hint: var(--app-hint);
-  --color-tg-link: var(--app-link);
-  --color-tg-accent: var(--app-accent);
-  --color-tg-destructive: var(--app-destructive);
-
-  --font-sans:
-    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue',
-    system-ui, sans-serif;
-}
-
 :root {
   /* Telegram variables, with app fallbacks. */
   --app-bg: var(--tg-theme-bg-color, #0b0a12);
