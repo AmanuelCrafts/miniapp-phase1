@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, ShieldX, Timer } from "lucide-react";
 import { BirrlyLogo } from "@/components/auth/BirrlyLogo";
 import { OpenInTelegram } from "@/components/auth/OpenInTelegram";
+import { StaleIdentityScreen } from "@/components/auth/StaleIdentityScreen";
 import { Button } from "@/components/ui/Button";
 import { useTelegram } from "@/contexts/TelegramContext";
 
@@ -13,6 +14,7 @@ type Phase =
   | "signing"
   | "no-telegram"
   | "suspended"
+  | "stale"
   | "rate-limited"
   | "error";
 
@@ -62,6 +64,17 @@ export function AuthGate() {
         if (response.status === 403) {
           setPhase("suspended");
           return;
+        }
+
+        // Expired cached initData: relaunching the webview is the only fix.
+        if (response.status === 401) {
+          const payload = (await response.json().catch(() => null)) as {
+            error?: { code?: string };
+          } | null;
+          if (payload?.error?.code === "expired_init_data") {
+            setPhase("stale");
+            return;
+          }
         }
 
         // 429 and transient 5xx: auto-retry a few times before giving up.
@@ -122,6 +135,19 @@ export function AuthGate() {
 
   if (phase === "no-telegram") {
     return <OpenInTelegram />;
+  }
+
+  if (phase === "stale") {
+    return (
+      <StaleIdentityScreen
+        onRetry={() => {
+          attemptedRef.current = false;
+          retryCountRef.current = 0;
+          setPhase("boot");
+          void signIn();
+        }}
+      />
+    );
   }
 
   if (phase === "suspended") {
