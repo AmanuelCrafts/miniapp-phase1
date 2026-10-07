@@ -1,10 +1,11 @@
 import { User as UserIcon } from "lucide-react";
 import { ProfileCard } from "@/components/profile/ProfileCard";
 import { LogoutButton } from "@/components/profile/LogoutButton";
+import { SwitchAccountButton } from "@/components/profile/SwitchAccountButton";
 import { formatMonthYear } from "@/lib/utils/format";
 import { getCurrentUser } from "@/lib/auth/session";
 
-/** 👤 PROFILE — Telegram identity, account status, logout. */
+/** 👤 PROFILE — Telegram identity, account status, session actions. */
 export default async function ProfilePage() {
   const user = await getCurrentUser();
 
@@ -55,7 +56,8 @@ export default async function ProfilePage() {
           </ul>
         </section>
 
-        <div className="animate-fade-up [animation-delay:140ms]">
+        <div className="animate-fade-up space-y-3 [animation-delay:140ms]">
+          <SwitchAccountButton />
           <LogoutButton />
         </div>
 

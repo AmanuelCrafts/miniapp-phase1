@@ -26,7 +26,7 @@ const MAX_AUTO_RETRIES = 3;
  */
 export function AuthGate() {
   const router = useRouter();
-  const { isReady, isTelegram, initData, triggerHaptic } = useTelegram();
+  const { isReady, isTelegram, initData, initDataUnsafe, triggerHaptic } = useTelegram();
 
   const [phase, setPhase] = useState<Phase>("boot");
   const attemptedRef = useRef(false);
@@ -169,7 +169,7 @@ export function AuthGate() {
         <GateTitle>We couldn&apos;t sign you in</GateTitle>
         <GateMessage>
           {isTelegram
-            ? "Your Telegram session couldn’t be verified. Please reopen BIRRLY from the bot, or try again."
+            ? "Telegram sent session data we couldn't verify — this usually happens when the Mini App was kept open during an account switch. Fully close BIRRLY and reopen it from the bot."
             : "Please try again."}
         </GateMessage>
         <RetryButton
@@ -184,6 +184,12 @@ export function AuthGate() {
   }
 
   // boot / signing — branded splash
+  const signingAs = (() => {
+    const u = initDataUnsafe;
+    if (!isTelegram || !u?.first_name) return null;
+    return [u.first_name, u.last_name].filter(Boolean).join(" ");
+  })();
+
   return (
     <GateFrame>
       <div className="animate-breathe">
@@ -192,6 +198,11 @@ export function AuthGate() {
       <p className="mt-5 text-lg font-extrabold tracking-tight text-ink">
         BIRRLY
       </p>
+      {signingAs ? (
+        <p className="mt-1.5 text-[13px] font-medium text-ink-dim">
+          Signing in as {signingAs}
+        </p>
+      ) : null}
       <div
         className="mt-2 flex items-center gap-1"
         role="status"
