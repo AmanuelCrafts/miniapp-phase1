@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
 import { AuthGate } from "@/components/auth/AuthGate";
+import { SessionSync } from "@/components/auth/SessionSync";
 import { AppShell } from "@/components/layout/AppShell";
 import { getCurrentUser } from "@/lib/auth/session";
 import { TelegramProvider } from "@/contexts/TelegramContext";
@@ -38,7 +39,14 @@ export default async function RootLayout({
           strategy="beforeInteractive"
         />
         <TelegramProvider>
-          {user ? <AppShell user={user}>{children}</AppShell> : <AuthGate />}
+          {user ? (
+            <AppShell user={user}>
+              <SessionSync />
+              {children}
+            </AppShell>
+          ) : (
+            <AuthGate />
+          )}
         </TelegramProvider>
       </body>
     </html>
