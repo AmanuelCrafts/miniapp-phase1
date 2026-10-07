@@ -24,7 +24,7 @@ export const POST = route(async (request) => {
   const ip = getRequestIp(request);
   const rateLimit = checkRateLimit(
     `auth-telegram:${ip}`,
-    getEnvNumber("AUTH_RATE_LIMIT", 10),
+    getEnvNumber("AUTH_RATE_LIMIT", 60),
     AUTH_RATE_WINDOW_MS,
   );
   if (!rateLimit.success) {
