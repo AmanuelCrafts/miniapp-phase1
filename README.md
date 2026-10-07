@@ -65,7 +65,7 @@ npm run dev            # http://localhost:3000
 | `SESSION_SECRET`        | ✅       | Random 32+ char secret used to pepper session-token hashes          |
 | `TELEGRAM_AUTH_MAX_AGE` | –        | Max age (seconds) of initData `auth_date` (default `86400`)         |
 | `SESSION_MAX_AGE`       | –        | Session lifetime in seconds (default `604800` = 7 days)             |
-| `AUTH_RATE_LIMIT`       | –        | Auth attempts per IP per minute (default `10`)                      |
+| `AUTH_RATE_LIMIT`       | –        | Auth attempts per IP per minute (default `60`; mobile-carrier NAT shares IPs across users)                      |
 
 Generate a strong secret: `openssl rand -hex 32`
 

@@ -105,6 +105,10 @@ async function readSessionCookieToken(): Promise<string | null> {
 /**
  * Resolve the current authenticated user from the session cookie.
  * Cached per request so layout + pages share one lookup.
+ *
+ * Resilience: a transient database error here would crash every page into
+ * the global error boundary. Instead we log and treat the caller as
+ * unauthenticated — the AuthGate then shows a branded, retryable state.
  */
 export const getCurrentSessionUser = cache(async (): Promise<{
   session: SessionDocument;
@@ -113,16 +117,21 @@ export const getCurrentSessionUser = cache(async (): Promise<{
   const token = await readSessionCookieToken();
   if (!token) return null;
 
-  const session = await findSessionByToken(token);
-  if (!session) return null;
+  try {
+    const session = await findSessionByToken(token);
+    if (!session) return null;
 
-  const user = await User.findById(session.userId).populate(
-    "currentVipPlan",
-    "level",
-  );
-  if (!user || user.status === "SUSPENDED") return null;
+    const user = await User.findById(session.userId).populate(
+      "currentVipPlan",
+      "level",
+    );
+    if (!user || user.status === "SUSPENDED") return null;
 
-  return { session, user };
+    return { session, user };
+  } catch (error) {
+    console.error("[session] lookup failed (treating as unauthenticated):", error);
+    return null;
+  }
 });
 
 /** Convenience wrapper returning the sanitized public user (or null). */

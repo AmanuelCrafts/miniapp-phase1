@@ -16,6 +16,9 @@ type Phase =
   | "rate-limited"
   | "error";
 
+/** Auto-retry budget for transient (429/5xx/network) handshake failures. */
+const MAX_AUTO_RETRIES = 3;
+
 /**
  * Rendered when no valid session exists. Performs the one-time Telegram
  * handshake: sends the raw initData to POST /api/auth/telegram, then refreshes
@@ -27,6 +30,7 @@ export function AuthGate() {
 
   const [phase, setPhase] = useState<Phase>("boot");
   const attemptedRef = useRef(false);
+  const retryCountRef = useRef(0);
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -36,31 +40,70 @@ export function AuthGate() {
     };
   }, []);
 
-  const signIn = useCallback(async () => {
-    setPhase("signing");
-    try {
-      const response = await fetch("/api/auth/telegram", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ initData }),
-        cache: "no-store",
-      });
+  const signIn = useCallback(
+    async (options?: { isRetry?: boolean }) => {
+      setPhase("signing");
+      try {
+        const response = await fetch("/api/auth/telegram", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ initData }),
+          cache: "no-store",
+        });
 
-      if (!mountedRef.current) return;
+        if (!mountedRef.current) return;
 
-      if (response.ok) {
-        triggerHaptic("success");
-        router.refresh();
-        return;
+        if (response.ok) {
+          triggerHaptic("success");
+          router.refresh();
+          return;
+        }
+
+        if (response.status === 403) {
+          setPhase("suspended");
+          return;
+        }
+
+        // 429 and transient 5xx: auto-retry a few times before giving up.
+        if (
+          (response.status === 429 || response.status >= 500) &&
+          (options?.isRetry ? retryCountRef.current : 0) < MAX_AUTO_RETRIES
+        ) {
+          if (!options?.isRetry) retryCountRef.current = 0;
+          retryCountRef.current += 1;
+          const attempt = retryCountRef.current;
+          const delay = Math.min(1_000 * 2 ** (attempt - 1), 8_000);
+          if (mountedRef.current) {
+            setPhase("signing");
+            setTimeout(() => {
+              if (mountedRef.current) void signIn({ isRetry: true });
+            }, delay);
+          }
+          return;
+        }
+
+        if (response.status === 429) setPhase("rate-limited");
+        else setPhase("error");
+      } catch {
+        // Network failure — treat as transient and retry.
+        const attempt = options?.isRetry
+          ? retryCountRef.current
+          : 0;
+        if (attempt < MAX_AUTO_RETRIES) {
+          retryCountRef.current = attempt + 1;
+          const delay = Math.min(1_000 * 2 ** (attempt), 8_000);
+          if (mountedRef.current) {
+            setTimeout(() => {
+              if (mountedRef.current) void signIn({ isRetry: true });
+            }, delay);
+          }
+          return;
+        }
+        if (mountedRef.current) setPhase("error");
       }
-
-      if (response.status === 403) setPhase("suspended");
-      else if (response.status === 429) setPhase("rate-limited");
-      else setPhase("error");
-    } catch {
-      if (mountedRef.current) setPhase("error");
-    }
-  }, [initData, router, triggerHaptic]);
+    },
+    [initData, router, triggerHaptic],
+  );
 
   useEffect(() => {
     if (!isReady) return; // wait until we know whether Telegram SDK exists
@@ -109,6 +152,7 @@ export function AuthGate() {
         <RetryButton
           onRetry={() => {
             attemptedRef.current = false;
+            retryCountRef.current = 0;
             void signIn();
           }}
         />
@@ -131,6 +175,7 @@ export function AuthGate() {
         <RetryButton
           onRetry={() => {
             attemptedRef.current = false;
+            retryCountRef.current = 0;
             void signIn();
           }}
         />
