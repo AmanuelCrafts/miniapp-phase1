@@ -32,7 +32,10 @@ export default function PlansPage() {
   const [vipError, setVipError] = useState(false);
 
   useEffect(() => {
-    fetch('/api/vip/plans')
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
+    fetch('/api/vip/plans', { signal: controller.signal })
       .then((res) => res.json())
       .then((data) => {
         setPlans(data.plans);
@@ -41,11 +44,15 @@ export default function PlansPage() {
       .catch(() => {
         setPlansError(true);
         setIsLoadingPlans(false);
-      });
+      })
+      .finally(() => clearTimeout(timeout));
   }, []);
 
   useEffect(() => {
-    fetch('/api/vip/current')
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
+    fetch('/api/vip/current', { signal: controller.signal })
       .then((res) => {
         if (res.ok) return res.json();
         return { hasVip: false, vip: null };
@@ -57,7 +64,8 @@ export default function PlansPage() {
       .catch(() => {
         setVipError(true);
         setIsLoadingVip(false);
-      });
+      })
+      .finally(() => clearTimeout(timeout));
   }, []);
 
   return (

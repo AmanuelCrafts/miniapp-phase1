@@ -25,7 +25,10 @@ export default function Home() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      fetch('/api/vip/current')
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+
+      fetch('/api/vip/current', { signal: controller.signal })
         .then((res) => {
           if (res.ok) return res.json();
           return { hasVip: false, vip: null };
@@ -34,7 +37,8 @@ export default function Home() {
           setCurrentVip(data.vip);
           setIsLoadingVip(false);
         })
-        .catch(() => setIsLoadingVip(false));
+        .catch(() => setIsLoadingVip(false))
+        .finally(() => clearTimeout(timeout));
     }
   }, [isAuthenticated]);
 
