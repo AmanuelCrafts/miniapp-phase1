@@ -10,6 +10,7 @@ export interface IUser {
   lastName?: string;
   avatarUrl?: string;
   status: UserStatus;
+  currentVipPlan?: Types.ObjectId | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,6 +50,11 @@ const userSchema = new Schema<IUser>(
       enum: ['ACTIVE', 'SUSPENDED'],
       default: 'ACTIVE',
       index: true,
+    },
+    currentVipPlan: {
+      type: Schema.Types.ObjectId,
+      ref: 'VIPPlan',
+      default: null,
     },
   },
   {
